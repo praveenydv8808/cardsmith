@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px system-ui,-apple-system,sans-serif;background:#fff;color:#000}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<title>Cardsmith</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Turn your notes into flashcards and quizzes, review each card beside the sentence it came from, then quiz yourself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a single-screen tabbed study tool — sticky header with tabs, one scrolling panel below. */
+  :root{
+    --bg:#f5f6fa; --surface:#ffffff; --surface-2:#eef1f7;
+    --fg:#1a1d26; --muted:#5b6274; --faint:#8a90a2;
+    --border:#e1e5ef; --border-strong:#ccd2e0;
+    --accent:#3451b2; --accent-soft:#e7ecfb; --on-accent:#ffffff;
+    --good:#15803d; --good-soft:#e4f3ea;
+    --bad:#be123c; --bad-soft:#fbe6ec;
+    --warn:#b45309; --warn-soft:#f7ecda;
+    --source-bg:#fbf7ee; --source-bar:#d8b65e;
+    --shadow:0 1px 2px rgba(20,24,40,.05),0 6px 20px rgba(20,24,40,.06);
+    --radius:14px;
+    --f-display:"Newsreader",Georgia,"Times New Roman",serif;
+    --f-body:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#13151b; --surface:#1b1e26; --surface-2:#232733;
+    --fg:#e8eaf1; --muted:#9aa1b3; --faint:#6f7688;
+    --border:#2a2e3a; --border-strong:#3a3f4e;
+    --accent:#90a4ff; --accent-soft:#232a45; --on-accent:#10131c;
+    --good:#54d487; --good-soft:#18281e;
+    --bad:#fb7185; --bad-soft:#2d1820;
+    --warn:#e0a257; --warn-soft:#2a2214;
+    --source-bg:#211e17; --source-bar:#9a8140;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#13151b; --surface:#1b1e26; --surface-2:#232733;
+    --fg:#e8eaf1; --muted:#9aa1b3; --faint:#6f7688;
+    --border:#2a2e3a; --border-strong:#3a3f4e;
+    --accent:#90a4ff; --accent-soft:#232a45; --on-accent:#10131c;
+    --good:#54d487; --good-soft:#18281e;
+    --bad:#fb7185; --bad-soft:#2d1820;
+    --warn:#e0a257; --warn-soft:#2a2214;
+    --source-bg:#211e17; --source-bar:#9a8140;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--fg);font-family:var(--f-body);line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+  button{font-family:inherit;cursor:pointer}
+  p{margin:0}
+  ::selection{background:var(--accent-soft)}
+
+  /* top bar painted under the phone's top system bar */
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+
+  .wrap{max-width:860px;margin:0 auto;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px));}
+
+  header.app{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+  .bar{display:flex;align-items:center;gap:12px;padding-block:12px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+  .brand .mark{font-family:var(--f-display);font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+  .brand .tag{font-size:.74rem;color:var(--faint);font-family:var(--f-mono);white-space:nowrap}
+  .iconbtn{background:none;border:1px solid var(--border-strong);color:var(--muted);width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:1rem}
+  .iconbtn:hover{color:var(--fg);border-color:var(--faint)}
+
+  nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px;scrollbar-width:thin}
+  .tab{display:flex;align-items:center;gap:7px;white-space:nowrap;background:none;border:none;color:var(--muted);
+    font-size:.9rem;font-weight:500;padding:8px 12px;border-radius:9px}
+  .tab:hover{background:var(--surface-2);color:var(--fg)}
+  .tab[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
+  .tab .count{font-family:var(--f-mono);font-size:.72rem;background:var(--surface-2);color:var(--muted);padding:1px 7px;border-radius:20px;font-variant-numeric:tabular-nums}
+  .tab[aria-selected="true"] .count{background:var(--accent);color:var(--on-accent)}
+
+  main{padding-top:20px;padding-bottom:64px}
+  .panel{animation:rise .25s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.panel{animation:none}}
+
+  .lead{font-family:var(--f-display);font-size:1.5rem;line-height:1.25;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:.95rem;margin-bottom:18px;max-width:62ch}
+
+  textarea{width:100%;min-height:230px;resize:vertical;background:var(--surface);color:var(--fg);
+    border:1px solid var(--border-strong);border-radius:var(--radius);padding:14px 16px;font-family:var(--f-body);
+    font-size:.95rem;line-height:1.6}
+  textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-strong);background:var(--surface);
+    color:var(--fg);font-size:.9rem;font-weight:600;padding:10px 16px;border-radius:10px}
+  .btn:hover{border-color:var(--faint)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.ghost{border-color:transparent;color:var(--muted);font-weight:500}
+  .btn.ghost:hover{background:var(--surface-2);color:var(--fg)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.sm{padding:7px 12px;font-size:.82rem}
+
+  .hint{font-size:.82rem;color:var(--faint);margin-top:10px}
+  .meta{font-size:.78rem;color:var(--faint);font-family:var(--f-mono)}
+
+  /* review card */
+  .queue{display:flex;flex-direction:column;gap:16px;margin-top:4px}
+  .qcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .qcard .top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .chip{font-family:var(--f-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:20px;font-weight:500}
+  .chip.flash{background:var(--accent-soft);color:var(--accent)}
+  .chip.quiz{background:var(--warn-soft);color:var(--warn)}
+  .qbody{padding:16px}
+  .fieldlabel{font-family:var(--f-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:5px}
+  .face{font-size:1.02rem;line-height:1.5}
+  .face.q{font-weight:600;margin-bottom:14px}
+  .face.a{color:var(--fg)}
+  .divider{height:1px;background:var(--border);margin:14px 0}
+  .source{background:var(--source-bg);border-left:3px solid var(--source-bar);border-radius:0 8px 8px 0;
+    padding:10px 14px;margin-top:16px;font-family:var(--f-mono);font-size:.82rem;line-height:1.55;color:var(--fg)}
+  .source .fieldlabel{color:var(--source-bar);margin-bottom:4px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface-2)}
+  .act{flex:1;min-width:110px;justify-content:center;border:1px solid var(--border-strong);background:var(--surface);
+    display:inline-flex;align-items:center;gap:7px;font-size:.86rem;font-weight:600;padding:9px 12px;border-radius:9px;color:var(--fg)}
+  .act.approve{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+  .act.approve:hover{background:var(--good-soft)}
+  .act.discard{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+  .act.discard:hover{background:var(--bad-soft)}
+  .act.edit:hover{background:var(--surface-2)}
+  .act.save{color:var(--on-accent);background:var(--accent);border-color:var(--accent)}
+
+  .edit-in{width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border-strong);
+    border-radius:8px;padding:9px 11px;font-family:var(--f-body);font-size:.98rem;line-height:1.5}
+  .edit-in:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  textarea.edit-in{min-height:64px;resize:vertical}
+
+  /* library */
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .search{flex:1;min-width:180px;position:relative}
+  .search input{width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border-strong);
+    border-radius:10px;padding:10px 12px 10px 36px;font-family:var(--f-body);font-size:.9rem}
+  .search input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint)}
+  .libitem{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .libitem summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+  .libitem summary::-webkit-details-marker{display:none}
+  .libitem .q{font-weight:600;flex:1;min-width:0}
+  .libitem .caret{color:var(--faint);transition:transform .2s;margin-top:3px}
+  .libitem[open] .caret{transform:rotate(90deg)}
+  .libitem .reveal{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+  .libitem .reveal .a{margin-bottom:8px}
+
+  /* quiz */
+  .quizstage{max-width:600px;margin:0 auto}
+  .flashcard{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
+    padding:34px 28px;min-height:260px;display:flex;flex-direction:column;justify-content:center;text-align:center;gap:14px}
+  .flashcard .k{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .flashcard .big{font-family:var(--f-display);font-size:1.5rem;line-height:1.3}
+  .flashcard .ans{font-size:1.15rem;color:var(--fg);font-weight:500}
+  .progwrap{height:7px;background:var(--surface-2);border-radius:20px;overflow:hidden;margin-bottom:18px}
+  .progwrap i{display:block;height:100%;background:var(--accent);border-radius:20px;transition:width .3s}
+  .scoreline{display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:8px;font-variant-numeric:tabular-nums}
+
+  /* empty state */
+  .empty{text-align:center;padding:48px 20px;color:var(--muted)}
+  .empty .icn{font-size:2rem;margin-bottom:10px;opacity:.6}
+  .empty h3{font-family:var(--f-display);font-size:1.3rem;color:var(--fg);margin-bottom:6px}
+  .empty p{max-width:44ch;margin:0 auto;font-size:.92rem}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);
+    background:var(--fg);color:var(--bg);padding:11px 18px;border-radius:30px;font-size:.86rem;font-weight:500;
+    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:90vw}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* lock overlay */
+  #lock{position:fixed;inset:0;z-index:60;background:var(--bg);display:none;place-items:center;padding:20px}
+  #lock.on{display:grid}
+  .lockbox{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);
+    padding:30px 26px;max-width:360px;width:100%;text-align:center}
+  .lockbox .mark{font-family:var(--f-display);font-size:1.6rem;margin-bottom:4px}
+  .lockbox p{color:var(--muted);font-size:.88rem;margin-bottom:18px}
+  .lockbox input{width:100%;text-align:center;letter-spacing:.3em;font-size:1.1rem;font-family:var(--f-mono);
+    background:var(--bg);color:var(--fg);border:1px solid var(--border-strong);border-radius:10px;padding:12px}
+  .lockbox input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .lockerr{color:var(--bad);font-size:.8rem;min-height:1.1em;margin-top:8px}
+
+  .settings-grp{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  .settings-grp h3{font-size:1rem;margin-bottom:4px}
+  .settings-grp p{color:var(--muted);font-size:.86rem;margin-bottom:14px}
+  .inline-input{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .inline-input input{background:var(--bg);color:var(--fg);border:1px solid var(--border-strong);border-radius:9px;
+    padding:9px 11px;font-family:var(--f-mono);font-size:.9rem;flex:1;min-width:140px}
+  .note-sm{font-size:.78rem;color:var(--faint);margin-top:10px;line-height:1.5}
+
+  .sample-flag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:.72rem;
+    color:var(--warn);background:var(--warn-soft);padding:4px 10px;border-radius:20px;margin-bottom:14px}
+</style>
+
+<div id="lock" aria-hidden="true">
+  <form class="lockbox" id="lockForm">
+    <div class="mark">Cardsmith</div>
+    <p>This guide is locked. Enter your passcode to continue.</p>
+    <input id="lockInput" type="password" inputmode="numeric" autocomplete="off" aria-label="Passcode" placeholder="••••">
+    <div class="lockerr" id="lockErr" role="alert"></div>
+    <button class="btn primary" type="submit" style="width:100%;justify-content:center;margin-top:14px">Unlock</button>
+  </form>
+</div>
+
+<header class="app">
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand">
+        <span class="mark">Cardsmith</span>
+        <span class="tag">notes → cards, you decide</span>
+      </div>
+      <button class="iconbtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="notes" aria-selected="true">✍︎ Notes</button>
+      <button class="tab" role="tab" data-tab="review" aria-selected="false">⚖︎ Review <span class="count" id="cReview">0</span></button>
+      <button class="tab" role="tab" data-tab="library" aria-selected="false">📚 Library <span class="count" id="cLib">0</span></button>
+      <button class="tab" role="tab" data-tab="quiz" aria-selected="false">✦ Quiz</button>
+      <button class="tab" role="tab" data-tab="settings" aria-selected="false">⚙︎ Settings</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- NOTES -->
+  <section class="panel" id="p-notes">
+    <h1 class="lead">Paste your notes, get a first draft of cards.</h1>
+    <p class="sub">Drop in a lecture transcript or a page of notes. Cardsmith pulls out the key bits and turns them into flashcards and quiz questions, each one kept next to the sentence it came from. You decide what's good before anything gets saved.</p>
+    <textarea id="notes" placeholder="Paste a lecture transcript or your notes here…&#10;&#10;Tip: definitions like “X is …” or “X: …” become flashcards; other key sentences become fill-in-the-blank quiz questions."></textarea>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary" id="genBtn">✦ Generate draft cards</button>
+      <button class="btn ghost" id="sampleBtn">Load sample notes</button>
+      <span class="meta" id="noteStat"></span>
+    </div>
+    <p class="hint">Everything runs here in your browser, so your notes stay on your device. New drafts show up in <strong>Review</strong> for you to approve, fix, or toss.</p>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="panel" id="p-review" hidden>
+    <h1 class="lead">Check each card against your notes.</h1>
+    <p class="sub">Every draft sits right next to the sentence it came from, so a quick glance tells you if it's right. Keep the good ones, fix the close ones, drop the rest. This is the part that keeps your library honest.</p>
+    <div id="queueWrap"></div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="panel" id="p-library" hidden>
+    <h1 class="lead">Your approved cards.</h1>
+    <p class="sub">All the cards you kept, in one searchable place. Tap one to see its answer and where it came from.</p>
+    <div class="toolbar">
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="libSearch" type="search" placeholder="Search your cards…" aria-label="Search library">
+      </label>
+      <button class="btn sm ghost" id="exportBtn">⇩ Export</button>
+    </div>
+    <div id="libWrap"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="panel" id="p-quiz" hidden>
+    <h1 class="lead">Quiz yourself.</h1>
+    <p class="sub">Pulls from the cards you've kept. Read the prompt, try to recall the answer, then say how it went. Cardsmith keeps score for the round.</p>
+    <div id="quizWrap"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="p-settings" hidden>
+    <h1 class="lead">Settings.</h1>
+    <p class="sub">Keep your guide private and manage your data.</p>
+
+    <div class="settings-grp">
+      <h3>Lock with a passcode</h3>
+      <p>Add a passcode so this study guide asks for it before opening in this browser.</p>
+      <div class="inline-input" id="lockSet">
+        <input id="passInput" type="text" inputmode="numeric" placeholder="Choose a passcode" autocomplete="off">
+        <button class="btn sm primary" id="setLockBtn">Set passcode</button>
+      </div>
+      <div id="lockState"></div>
+      <p class="note-sm">This is a local lock: it keeps the guide private on this device and browser. It is not a server login, so it cannot sync across devices — for shared, multi-device sign-in you'd host the app on a backend (for example, Replit's auth in the mission's final phase).</p>
+    </div>
+
+    <div class="settings-grp">
+      <h3>Your data</h3>
+      <p>Your notes, drafts, and approved cards are saved in this browser so they're here when you return.</p>
+      <div class="row">
+        <button class="btn sm" id="clearQueueBtn">Clear review queue</button>
+        <button class="btn sm" id="resetBtn" style="color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)">Reset everything</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ---------- storage ---------- */
+var KEY="cardsmith.v1";
+var state={notes:"",cards:[],sample:false,pass:null,quiz:null};
+
+function load(){
+  try{var raw=localStorage.getItem(KEY); if(raw){state=Object.assign(state,JSON.parse(raw));}}catch(e){}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify({notes:state.notes,cards:state.cards,sample:state.sample,pass:state.pass}));}catch(e){}
+}
+function uid(){return Math.random().toString(36).slice(2,9);}
+
+/* ---------- card generation (on-device) ---------- */
+var STOP=new Set(("the a an and or but of to in on at for with by from as is are was were be been being this that these those it its into over under about than then so such not no can could should would may might will shall we you they he she them his her their our your also very more most many much each both few other some any all one two three used use using based between within across during through while where when which who whom whose what why how".split(" ")));
+
+function splitSentences(text){
+  var out=[];
+  text.split(/\n+/).forEach(function(line){
+    line=line.replace(/^[\s>•‣◦\-\*–—]+/,"").replace(/^\d+[\.\)]\s*/,"").trim();
+    if(!line) return;
+    var parts=line.match(/[^.!?]+[.!?]*/g);
+    if(!parts) parts=[line];
+    parts.forEach(function(p){p=p.trim(); if(p.length>=10) out.push(p);});
+  });
+  return out;
+}
+function esc(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function stripLead(t){return t.replace(/^(the|a|an)\s+/i,"").trim();}
+
+var DEF=/^(.{2,70}?)\s+(?:is|are|was|were|is defined as|are defined as|refers to|means|is called|denotes|describes)\s+(.{6,}?)[.?!]?$/i;
+var COLON=/^([A-Za-z][^:]{1,60}?):\s+(.{6,}?)[.?!]?$/;
+
+function keyTerm(s){
+  var acro=s.match(/\b([A-Z]{2,6})\b/);
+  if(acro && !STOP.has(acro[1].toLowerCase())) return acro[1];
+  var caps=s.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b/g);
+  if(caps && caps.length){
+    var notStart=caps.filter(function(c){return s.indexOf(c)>0;});
+    return (notStart[0]||caps[0]);
+  }
+  var words=(s.match(/\b[A-Za-z][A-Za-z\-]{3,}\b/g)||[]).filter(function(w){return !STOP.has(w.toLowerCase());});
+  words.sort(function(a,b){return b.length-a.length;});
+  return words[0]||null;
+}
+
+function generate(text){
+  var sents=splitSentences(text), cards=[], seen={};
+  sents.forEach(function(s){
+    var m=s.match(DEF)||s.match(COLON), made=false;
+    if(m){
+      var term=stripLead(m[1]), def=m[2].trim();
+      if(term && term.length<=70 && def.length>=6 && term.split(" ").length<=7){
+        var plural=/s$/.test(term)&&!/(ss|us|is)$/i.test(term);
+        var proper=/^[A-Z]/.test(term);
+        var art = (plural||proper) ? "" : (/^[aeiou]/i.test(term)?"an ":"a ");
+        var front="What "+(plural?"are":"is")+" "+art+term+"?";
+        var k=front.toLowerCase();
+        if(!seen[k]){seen[k]=1;cards.push(mk("flashcard",front,cap(def),s));made=true;}
+      }
+    }
+    if(!made && s.length<=240){
+      var t=keyTerm(s);
+      if(t){
+        var re=new RegExp("\\b"+esc(t)+"\\b");
+        if(re.test(s)){
+          var q=s.replace(re,"_____");
+          var k2="cz:"+s.toLowerCase();
+          if(q!==s && !seen[k2]){seen[k2]=1;cards.push(mk("quiz",q,t,s));}
+        }
+      }
+    }
+  });
+  return cards;
+}
+function mk(type,front,back,source){return {id:uid(),type:type,front:front,back:back,source:source,status:"pending"};}
+
+/* ---------- DOM helpers ---------- */
+function $(s){return document.querySelector(s);}
+function $all(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
+function el(tag,cls,txt){var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e;}
+var toastT;
+function toast(msg){var t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("show");},2200);}
+
+/* ---------- tabs ---------- */
+function show(tab){
+  $all(".tab").forEach(function(b){b.setAttribute("aria-selected", b.dataset.tab===tab?"true":"false");});
+  ["notes","review","library","quiz","settings"].forEach(function(t){$("#p-"+t).hidden = (t!==tab);});
+  if(tab==="review") renderQueue();
+  if(tab==="library") renderLibrary();
+  if(tab==="quiz") renderQuizHome();
+  if(tab==="settings") renderLockState();
+  try{location.hash=tab;}catch(e){}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$all(".tab").forEach(function(b){b.addEventListener("click",function(){show(b.dataset.tab);});});
+
+/* ---------- counts ---------- */
+function counts(){
+  var r=state.cards.filter(function(c){return c.status==="pending";}).length;
+  var l=state.cards.filter(function(c){return c.status==="approved";}).length;
+  $("#cReview").textContent=r; $("#cLib").textContent=l;
+}
+
+/* ---------- notes ---------- */
+function updNoteStat(){
+  var n=$("#notes").value.trim();
+  var words=n?n.split(/\s+/).length:0;
+  $("#noteStat").textContent = words? (words+" words"):"";
+}
+$("#notes").addEventListener("input",function(){state.notes=$("#notes").value;updNoteStat();save();});
+
+$("#genBtn").addEventListener("click",function(){
+  var text=$("#notes").value.trim();
+  if(!text){toast("Paste some notes first.");return;}
+  var drafts=generate(text);
+  if(!drafts.length){toast("Couldn't find clear concepts — try notes with definitions or fuller sentences.");return;}
+  // avoid duplicating fronts already in the system
+  var existing={}; state.cards.forEach(function(c){existing[c.front.toLowerCase()]=1;});
+  var added=0;
+  drafts.forEach(function(d){ if(!existing[d.front.toLowerCase()]){state.cards.push(d);existing[d.front.toLowerCase()]=1;added++;} });
+  save();counts();
+  toast(added+" draft "+(added===1?"card":"cards")+" added to Review.");
+  show("review");
+});
+
+var SAMPLE="Apache Kafka is a distributed event streaming platform used to build real-time data pipelines and streaming applications.\n"+
+"A topic is a named stream of records that producers write to and consumers read from.\n"+
+"Topics are split into partitions, which allow a topic to be parallelised across many consumers.\n"+
+"A consumer group is a set of consumers that cooperate to consume a topic, with each partition assigned to exactly one consumer in the group.\n"+
+"The offset is the position of a record within a partition, and consumers track offsets to know what they have already read.\n"+
+"Idempotent processing means handling the same event more than once without changing the final result, which protects against duplicates on retries.\n"+
+"The outbox pattern writes a business change and the event to publish inside the same database transaction, so events are never lost from a half-committed write.\n"+
+"Exactly-once semantics combine idempotent producers and transactional writes so each record affects the system a single time.\n"+
+"Replication keeps copies of each partition on multiple brokers so the cluster survives a broker failure.\n"+
+"A broker is a single Kafka server that stores data and serves client requests.";
+
+$("#sampleBtn").addEventListener("click",function(){
+  $("#notes").value=SAMPLE;state.notes=SAMPLE;state.sample=true;updNoteStat();save();
+  toast("Sample notes loaded — hit Generate.");
+});
+
+/* ---------- review queue ---------- */
+function renderQueue(){
+  var wrap=$("#queueWrap"); wrap.innerHTML="";
+  var pend=state.cards.filter(function(c){return c.status==="pending";});
+  if(!pend.length){
+    wrap.appendChild(emptyState("⚖︎","The queue is clear","Generate cards from the Notes tab and they'll line up here for review."));
+    return;
+  }
+  if(state.sample && pend.length){
+    var flag=el("div","sample-flag"); flag.innerHTML="◆ Sample cards from the Kafka notes — approve, edit, or clear anytime"; wrap.appendChild(flag);
+  }
+  var list=el("div","queue");
+  pend.forEach(function(c){ list.appendChild(queueCard(c)); });
+  wrap.appendChild(list);
+}
+function queueCard(c){
+  var card=el("div","qcard"); card.dataset.id=c.id;
+  var top=el("div","top");
+  var chip=el("span","chip "+(c.type==="flashcard"?"flash":"quiz"), c.type==="flashcard"?"Flashcard":"Quiz");
+  top.appendChild(chip);
+  card.appendChild(top);
+
+  var body=el("div","qbody");
+  body.appendChild(viewFace(c));
+  var src=el("div","source");
+  var sl=el("div","fieldlabel","From your notes"); src.appendChild(sl);
+  src.appendChild(document.createTextNode(c.source));
+  body.appendChild(src);
+  card.appendChild(body);
+
+  var act=el("div","actions");
+  var approve=el("button","act approve"); approve.innerHTML="✓ Approve";
+  approve.addEventListener("click",function(){setStatus(c.id,"approved");toast("Added to library.");renderQueue();counts();});
+  var edit=el("button","act edit"); edit.innerHTML="✎ Edit";
+  edit.addEventListener("click",function(){startEdit(card,c);});
+  var discard=el("button","act discard"); discard.innerHTML="✕ Discard";
+  discard.addEventListener("click",function(){setStatus(c.id,"discarded");toast("Discarded.");renderQueue();counts();});
+  act.appendChild(approve);act.appendChild(edit);act.appendChild(discard);
+  card.appendChild(act);
+  return card;
+}
+function viewFace(c){
+  var box=el("div");
+  var ql=el("div","fieldlabel", c.type==="flashcard"?"Question":"Prompt"); box.appendChild(ql);
+  box.appendChild(el("div","face q",c.front));
+  var al=el("div","fieldlabel", c.type==="flashcard"?"Answer":"Answer"); box.appendChild(al);
+  box.appendChild(el("div","face a",c.back));
+  return box;
+}
+function startEdit(card,c){
+  var body=card.querySelector(".qbody"); body.innerHTML="";
+  body.appendChild(el("div","fieldlabel",c.type==="flashcard"?"Question":"Prompt"));
+  var fIn=el("textarea","edit-in"); fIn.value=c.front; body.appendChild(fIn);
+  body.appendChild(el("div","fieldlabel","Answer")); body.lastChild.style.marginTop="12px";
+  var bIn=el("textarea","edit-in"); bIn.value=c.back; body.appendChild(bIn);
+  var src=el("div","source");
+  src.appendChild(el("div","fieldlabel","From your notes"));
+  src.appendChild(document.createTextNode(c.source)); body.appendChild(src);
+
+  var act=card.querySelector(".actions"); act.innerHTML="";
+  var saveB=el("button","act save"); saveB.innerHTML="✓ Save & approve";
+  saveB.addEventListener("click",function(){
+    c.front=fIn.value.trim()||c.front; c.back=bIn.value.trim()||c.back; c.status="approved";
+    save();toast("Saved to library.");renderQueue();counts();
+  });
+  var keepB=el("button","act edit"); keepB.innerHTML="Save draft";
+  keepB.addEventListener("click",function(){
+    c.front=fIn.value.trim()||c.front; c.back=bIn.value.trim()||c.back; save();toast("Draft updated.");renderQueue();
+  });
+  var cancelB=el("button","act"); cancelB.textContent="Cancel";
+  cancelB.addEventListener("click",function(){renderQueue();});
+  act.appendChild(saveB);act.appendChild(keepB);act.appendChild(cancelB);
+  fIn.focus();
+}
+function setStatus(id,st){var c=find(id); if(c){c.status=st;save();}}
+function find(id){return state.cards.filter(function(c){return c.id===id;})[0];}
+
+/* ---------- library ---------- */
+function renderLibrary(){
+  var wrap=$("#libWrap"); wrap.innerHTML="";
+  var q=($("#libSearch").value||"").toLowerCase().trim();
+  var lib=state.cards.filter(function(c){return c.status==="approved";});
+  if(!lib.length){
+    wrap.appendChild(emptyState("📚","Nothing approved yet","Approve cards in the Review tab and they'll collect here, ready to quiz."));
+    return;
+  }
+  var items=lib.filter(function(c){return !q || (c.front+" "+c.back+" "+c.source).toLowerCase().indexOf(q)>-1;});
+  if(!items.length){wrap.appendChild(emptyState("🔍","No matches","Nothing in your library matches “"+q+"”."));return;}
+  items.forEach(function(c){
+    var d=el("details","libitem");
+    var sum=el("summary");
+    var car=el("span","caret"); car.innerHTML="▸";
+    var qt=el("span","q",c.front);
+    var chip=el("span","chip "+(c.type==="flashcard"?"flash":"quiz"), c.type==="flashcard"?"Card":"Quiz");
+    sum.appendChild(car);sum.appendChild(qt);sum.appendChild(chip);
+    d.appendChild(sum);
+    var rev=el("div","reveal");
+    rev.appendChild(el("div","fieldlabel","Answer"));
+    rev.appendChild(el("div","face a",c.back));
+    var src=el("div","source");src.appendChild(el("div","fieldlabel","From your notes"));src.appendChild(document.createTextNode(c.source));
+    rev.appendChild(src);
+    var rm=el("button","btn sm ghost","Remove from library"); rm.style.marginTop="12px";
+    rm.addEventListener("click",function(e){e.preventDefault();c.status="discarded";save();renderLibrary();counts();toast("Removed.");});
+    rev.appendChild(rm);
+    d.appendChild(rev);
+    wrap.appendChild(d);
+  });
+}
+$("#libSearch").addEventListener("input",renderLibrary);
+$("#exportBtn").addEventListener("click",function(){
+  var lib=state.cards.filter(function(c){return c.status==="approved";});
+  if(!lib.length){toast("Nothing to export yet.");return;}
+  var txt=lib.map(function(c){return "Q: "+c.front+"\nA: "+c.back+"\n(source: "+c.source+")";}).join("\n\n");
+  copyText(txt,lib.length+" cards copied to clipboard.");
+});
+function copyText(txt,okMsg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast(okMsg);}).catch(function(){selectFallback(txt);});
+  }else selectFallback(txt);
+}
+function selectFallback(txt){
+  var ta=el("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");toast("Copied.");}catch(e){toast("Press Ctrl/Cmd+C to copy.");}
+  setTimeout(function(){ta.remove();},50);
+}
+
+/* ---------- quiz ---------- */
+function renderQuizHome(){
+  var wrap=$("#quizWrap");wrap.innerHTML="";
+  var lib=state.cards.filter(function(c){return c.status==="approved";});
+  if(lib.length<1){
+    wrap.appendChild(emptyState("✦","Build a deck first","Approve a few cards in Review, then come back to quiz yourself."));
+    return;
+  }
+  var stage=el("div","quizstage");
+  var fc=el("div","flashcard");
+  fc.appendChild(el("div","k","Ready when you are"));
+  fc.appendChild(el("div","big",lib.length+" card"+(lib.length===1?"":"s")+" in your deck."));
+  fc.appendChild(el("div","ans","They come up in random order. Guess, show the answer, and say whether you got it."));
+  stage.appendChild(fc);
+  var r=el("div","row");r.style.justifyContent="center";r.style.marginTop="18px";
+  var start=el("button","btn primary","✦ Start round");
+  start.addEventListener("click",function(){startQuiz(lib);});
+  r.appendChild(start);
+  stage.appendChild(r);
+  wrap.appendChild(stage);
+}
+function startQuiz(lib){
+  var order=lib.slice();
+  for(var i=order.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=order[i];order[i]=order[j];order[j]=t;}
+  state.quiz={order:order,i:0,right:0,wrong:0};
+  renderQuizCard();
+}
+function renderQuizCard(){
+  var wrap=$("#quizWrap");wrap.innerHTML="";
+  var qz=state.quiz;
+  if(!qz) return renderQuizHome();
+  if(qz.i>=qz.order.length){ return renderQuizDone(); }
+  var c=qz.order[qz.i];
+  var stage=el("div","quizstage");
+  var line=el("div","scoreline");
+  line.appendChild(el("span",null,"Card "+(qz.i+1)+" of "+qz.order.length));
+  line.appendChild(el("span",null,"✓ "+qz.right+"   ✕ "+qz.wrong));
+  stage.appendChild(line);
+  var prog=el("div","progwrap");var bar=el("i");bar.style.width=(qz.i/qz.order.length*100)+"%";prog.appendChild(bar);stage.appendChild(prog);
+
+  var fc=el("div","flashcard");
+  fc.appendChild(el("div","k",c.type==="flashcard"?"Question":"Fill the blank"));
+  fc.appendChild(el("div","big",c.front));
+  var ansBox=el("div");ansBox.hidden=true;
+  var ans=el("div","ans",c.back);ansBox.appendChild(ans);
+  var src=el("div","source");src.style.textAlign="left";src.appendChild(el("div","fieldlabel","From your notes"));src.appendChild(document.createTextNode(c.source));ansBox.appendChild(src);
+  fc.appendChild(ansBox);
+  stage.appendChild(fc);
+
+  var r=el("div","row");r.style.justifyContent="center";r.style.marginTop="18px";
+  var reveal=el("button","btn primary","Show answer");
+  reveal.addEventListener("click",function(){
+    ansBox.hidden=false;r.innerHTML="";
+    var good=el("button","btn","✓ Got it");good.style.color="var(--good)";good.style.borderColor="color-mix(in srgb,var(--good) 40%,transparent)";
+    good.addEventListener("click",function(){qz.right++;qz.i++;save();renderQuizCard();});
+    var bad=el("button","btn","↻ Review again");bad.style.color="var(--warn)";bad.style.borderColor="color-mix(in srgb,var(--warn) 40%,transparent)";
+    bad.addEventListener("click",function(){qz.wrong++;qz.i++;renderQuizCard();});
+    r.appendChild(good);r.appendChild(bad);
+  });
+  r.appendChild(reveal);
+  stage.appendChild(r);
+  wrap.appendChild(stage);
+}
+function renderQuizDone(){
+  var wrap=$("#quizWrap");wrap.innerHTML="";
+  var qz=state.quiz;var total=qz.right+qz.wrong;var pct=total?Math.round(qz.right/total*100):0;
+  var stage=el("div","quizstage");
+  var fc=el("div","flashcard");
+  fc.appendChild(el("div","k","Round complete"));
+  fc.appendChild(el("div","big",qz.right+" / "+total+" recalled"));
+  fc.appendChild(el("div","ans",pct>=80?"Nice — most of that stuck.":pct>=50?"Good start. One more pass will get the rest.":"The ones you missed come back fastest if you run it again."));
+  stage.appendChild(fc);
+  var r=el("div","row");r.style.justifyContent="center";r.style.marginTop="18px";
+  var again=el("button","btn primary","↻ New round");
+  again.addEventListener("click",function(){state.quiz=null;renderQuizHome();});
+  r.appendChild(again);
+  stage.appendChild(r);
+  wrap.appendChild(stage);
+  state.quiz=null;
+}
+
+/* ---------- empty state ---------- */
+function emptyState(icn,title,msg){
+  var e=el("div","empty");
+  e.appendChild(el("div","icn",icn));
+  e.appendChild(el("h3",null,title));
+  e.appendChild(el("p",null,msg));
+  return e;
+}
+
+/* ---------- settings / lock ---------- */
+function renderLockState(){
+  var box=$("#lockState");box.innerHTML="";
+  if(state.pass){
+    var p=el("p","note-sm","✓ A passcode is set. This guide will ask for it next time it opens here.");p.style.color="var(--good)";
+    box.appendChild(p);
+    var rm=el("button","btn sm ghost","Remove passcode");rm.style.marginTop="8px";
+    rm.addEventListener("click",function(){state.pass=null;save();renderLockState();toast("Passcode removed.");});
+    box.appendChild(rm);
+    $("#passInput").value="";
+  }
+}
+$("#setLockBtn").addEventListener("click",function(){
+  var v=$("#passInput").value.trim();
+  if(v.length<3){toast("Use at least 3 characters.");return;}
+  state.pass=v;save();renderLockState();toast("Passcode set.");
+});
+$("#clearQueueBtn").addEventListener("click",function(){
+  state.cards=state.cards.filter(function(c){return c.status!=="pending";});
+  state.sample=false;save();counts();renderQueue();toast("Review queue cleared.");
+});
+$("#resetBtn").addEventListener("click",function(){
+  state.cards=[];state.notes="";state.sample=false;state.quiz=null;
+  $("#notes").value="";updNoteStat();save();counts();
+  renderQueue();renderLibrary();toast("Everything reset.");show("notes");
+});
+
+/* lock gate */
+function maybeLock(){
+  if(state.pass){ $("#lock").classList.add("on");$("#lock").setAttribute("aria-hidden","false");setTimeout(function(){$("#lockInput").focus();},60);}
+}
+$("#lockForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  if($("#lockInput").value===state.pass){ $("#lock").classList.remove("on");$("#lock").setAttribute("aria-hidden","true");$("#lockErr").textContent="";}
+  else{$("#lockErr").textContent="Wrong passcode. Try again.";$("#lockInput").value="";$("#lockInput").focus();}
+});
+
+/* ---------- theme ---------- */
+$("#themeBtn").addEventListener("click",function(){
+  var root=document.documentElement;
+  var cur=root.getAttribute("data-theme");
+  var sysDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+  var next = cur ? (cur==="dark"?"light":"dark") : (sysDark?"light":"dark");
+  root.setAttribute("data-theme",next);
+  try{localStorage.setItem("cardsmith.theme",next);}catch(e){}
+});
+(function(){try{var t=localStorage.getItem("cardsmith.theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+
+/* ---------- boot ---------- */
+load();
+if(!state.cards.length && !state.notes){
+  // first-time: open with sample loaded into Notes and drafts in queue so the tool shows what it does
+  state.notes=SAMPLE;state.sample=true;
+  state.cards=generate(SAMPLE);
+  save();
+}
+$("#notes").value=state.notes||"";
+updNoteStat();counts();
+var start=(location.hash||"").replace("#","");
+if(["notes","review","library","quiz","settings"].indexOf(start)===-1) start = state.cards.some(function(c){return c.status==="pending";})?"review":"notes";
+show(start);
+maybeLock();
+</script>
+</body>
+</html>
